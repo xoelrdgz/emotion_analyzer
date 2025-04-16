@@ -1,13 +1,14 @@
 import os
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-from colorama import Fore, Style, init
-import argparse
+import matplotlib
+matplotlib.use('Agg')  # Backend no interactivo para evitar errores
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from typing import List, Dict, Union, Optional
+import matplotlib.patches as patches  # Añadir esta línea
 import logging
 import sys
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from colorama import Fore, Style, init
+from typing import List, Dict, Union, Optional
 from tqdm import tqdm
 
 # Configure logging
@@ -194,21 +195,22 @@ class EmotionAnalyzer:
         sentiment_ax.set_xticks([])
         sentiment_ax.set_yticks([])
         
-        plt.tight_layout()
+        try:
+            plt.tight_layout()
+        except Warning:
+            pass
         
-        # Solo mostrar si no estamos en Streamlit
-        if show_plot:
+        if show_plot and not matplotlib.get_backend() == 'agg':
             plt.show()
             
         return fig  # Devolver la figura para permitir su uso en Streamlit
 
     def analyze(self, text: str) -> Optional[Dict]:
-        """Analyze text and return results"""
-        if not self.validate_input(text):
-            logger.error("Invalid input text")
-            return None
-
         try:
+            if not self.validate_input(text):
+                logger.error("Invalid input text")
+                return None
+
             sentiment_result = self.sentiment_classifier(text)[0]
             label = sentiment_result["label"].lower()
             score = sentiment_result["score"] * 100
@@ -247,7 +249,9 @@ class EmotionAnalyzer:
             }
 
         except Exception as e:
-            logger.error(f"Error analyzing text: {str(e)}")
+            logging.error(f"Error analyzing text: {str(e)}")
+            import traceback
+            logging.error(traceback.format_exc())
             return None
 
     def run_interactive(self):
