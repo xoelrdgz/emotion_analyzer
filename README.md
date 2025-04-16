@@ -1,7 +1,9 @@
 # Emotion and Sentiment Analyzer
+
 A Python-based tool that analyzes both sentiment and emotions in text using state-of-the-art BERT models.
 
 ## Features
+
 - Real-time sentiment analysis (positive/neutral/negative) with confidence scores
 - Detailed emotion analysis with confidence scores and filtering
 - Interactive visualization with:
@@ -15,6 +17,7 @@ A Python-based tool that analyzes both sentiment and emotions in text using stat
 - Configurable text length limits
 
 ## Requirements
+
 - Python 3.7+
 - CUDA-compatible GPU (optional, for faster processing)
 - Required Python packages (installed via requirements.txt):
@@ -25,13 +28,16 @@ A Python-based tool that analyzes both sentiment and emotions in text using stat
   - tqdm
 
 ## Installation
+
 1. Clone this repository:
+
 ```bash
 git clone <repository-url>
 cd emotion_analyzer
 ```
 
 2. Install the required packages:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -39,12 +45,15 @@ pip install -r requirements.txt
 ## Usage
 
 ### Basic Usage
+
 Run the analyzer in interactive mode:
+
 ```bash
 python emotion_analyzer.py
 ```
 
 ### Command Line Arguments
+
 The following command-line options are available:
 
 - `--no-vis`: Disable visualization of results
@@ -52,11 +61,13 @@ The following command-line options are available:
 - `--max-length N`: Set maximum text length (default: 512)
 
 Example with arguments:
+
 ```bash
 python emotion_analyzer.py --no-vis --batch-size 16 --max-length 256
 ```
 
 ### Interactive Mode
+
 - Enter text when prompted to analyze
 - Choose whether to display visualizations
 - Press 'q', 'quit', 'exit', or Ctrl+C to exit
@@ -67,6 +78,7 @@ python emotion_analyzer.py --no-vis --batch-size 16 --max-length 256
   - Color-coded terminal output
 
 ## Models Used
+
 - Sentiment Analysis: `nlptown/bert-base-multilingual-uncased-sentiment`
   - Provides 1-5 star ratings mapped to positive/neutral/negative
 - Emotion Analysis: `bhadresh-savani/bert-base-uncased-emotion`
@@ -74,6 +86,7 @@ python emotion_analyzer.py --no-vis --batch-size 16 --max-length 256
   - Filters out emotions with less than 3% confidence
 
 ## Output Format
+
 - Sentiment Analysis shows:
   - Rating (1-5 stars)
   - Simplified category (positive/neutral/negative)
@@ -84,10 +97,12 @@ python emotion_analyzer.py --no-vis --batch-size 16 --max-length 256
   - Color-coded visualization
 
 ## Error Handling
+
 - Input validation for text length
 - Graceful handling of model loading errors
 - Proper resource cleanup
 - Comprehensive logging
 
 ## License
+
 See the [LICENSE](LICENSE) file for details.
