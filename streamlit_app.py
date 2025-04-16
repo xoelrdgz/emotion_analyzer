@@ -1,25 +1,22 @@
 import streamlit as st
 import sys
 import os
-import json  # Añadir para json.dumps()
-import pandas as pd  # Añadir para pd.DataFrame()
+import json
+import pandas as pd
 from emotion_analyzer import EmotionAnalyzer, Config
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 import matplotlib
-matplotlib.use('Agg')  # Forzar el uso del backend no interactivo
+matplotlib.use('Agg')
 
-# Configurar logging para suprimir advertencias específicas
 import logging
 logging.getLogger('torch._C').setLevel(logging.ERROR)
 logging.getLogger('streamlit.watcher').setLevel(logging.ERROR)
 
-# Inicializar el historial de análisis si no existe
 if 'analysis_history' not in st.session_state:
     st.session_state.analysis_history = []
 
-# Inicializar variable para mantener el texto
 if 'text_input_value' not in st.session_state:
     st.session_state.text_input_value = ""
 
@@ -41,7 +38,6 @@ st.write("Analyze emotions and sentiment in text using BERT models")
 analyzer = get_analyzer()
 
 if analyzer:
-    # Ejemplos predefinidos
     st.subheader("Try with an example")
     examples = {
         "Positive": "I'm really happy about the progress we've made. This project is turning out amazing!",
@@ -49,26 +45,22 @@ if analyzer:
         "Mixed": "While I'm excited about the new opportunities, I'm also nervous about the challenges ahead."
     }
     
-    # Usar botones para una interacción más directa
     example_cols = st.columns(len(examples))
     for i, (label, example_text) in enumerate(examples.items()):
         with example_cols[i]:
             if st.button(f"{label} Example"):
                 st.session_state.text_input_value = example_text
-                st.rerun()  # <- Cambiar aquí
+                st.rerun()
     
-    # Si quieres un botón para limpiar el texto
     if st.button("Clear text"):
         st.session_state.text_input_value = ""
-        st.rerun()  # <- Cambiar aquí
+        st.rerun()
 
-    # Text input con el valor actualizado
     text_input = st.text_area("Enter text to analyze:", 
                              value=st.session_state.text_input_value, 
                              height=150,
                              key="text_analysis_input")
     
-    # File upload
     uploaded_file = st.file_uploader("Or upload a text file:", type=["txt"])
     
     analyze_button = st.button("Analyze")
@@ -83,14 +75,12 @@ if analyzer:
             results = analyzer.analyze(text)
             
             if results:
-                # Guardar en el historial
                 st.session_state.analysis_history.append({
                     "text": text[:50] + "..." if len(text) > 50 else text,
                     "sentiment": results["sentiment"]["label"],
                     "top_emotion": results["emotions"][0]["label"] if results["emotions"] else "None"
                 })
                 
-                # Display results in two columns
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -109,12 +99,8 @@ if analyzer:
                         st.progress(score / 100)
                         st.write(f"{emotion['label']}: {score:.2f}%")
                 
-                # Añade después de mostrar los resultados principales
-
-                # Análisis de palabras
                 st.subheader("Text Analysis")
                 
-                # Estadísticas básicas del texto
                 word_count = len(text.split())
                 char_count = len(text)
                 
@@ -124,16 +110,13 @@ if analyzer:
                 with col4:
                     st.metric("Character Count", char_count)
                 
-                # Nube de palabras
                 if word_count > 5:
                     try:
                         from wordcloud import WordCloud, STOPWORDS
                         import numpy as np
                                                 
-                        # Usar stopwords en inglés para eliminar palabras comunes
                         stopwords = set(STOPWORDS)
                         
-                        # Asegurarse de que tenemos texto para analizar
                         if text and len(text.strip()) > 0:
                             wordcloud = WordCloud(
                                 width=800, 
@@ -147,32 +130,27 @@ if analyzer:
                                 max_font_size=60
                             ).generate(text)
                             
-                            # Mostrar la nube de palabras como imagen
-                            # (eliminado el st.pyplot para evitar duplicados)
                             st.image(wordcloud.to_array(), caption='Word Cloud')
                         else:
-                            st.warning("El texto está vacío, no se puede generar la nube de palabras.")
+                            st.warning("Text is empty or invalid for word cloud generation.")
                     except Exception as e:
-                        st.error(f"Error al generar la nube de palabras: {str(e)}")
-                        st.info("Asegúrate de tener el paquete wordcloud instalado con: pip install wordcloud")
+                        st.error(f"Error generating word cloud: {e}")
+                        st.info("Please ensure you have the wordcloud library installed.")
                 else:
-                    st.info("Se necesitan más de 5 palabras para generar una nube de palabras significativa.")
+                    st.info("Not enough words to generate a word cloud.")
                 
-                # Generate visualization (no mostrada)
                 st.subheader("Visualization Download")
                 fig = analyzer.visualize_results(
                     sentiment["label"], 
                     sentiment["score"], 
                     results["emotions"],
-                    show_plot=False  # No mostrar directamente para evitar el plt.show()
+                    show_plot=False
                 )
 
-                # Save visualization to buffer
                 buf = BytesIO()
                 fig.savefig(buf, format="png")
                 buf.seek(0)
 
-                # Download button for visualization
                 st.download_button(
                     label="Download Visualization",
                     data=buf,
@@ -180,9 +158,6 @@ if analyzer:
                     mime="image/png"
                 )
 
-                # Añadir después del botón de descarga de la visualización
-
-                # Exportar resultados en JSON
                 json_results = json.dumps(results, indent=2)
                 st.download_button(
                     label="Download Results as JSON",
@@ -191,7 +166,6 @@ if analyzer:
                     mime="application/json"
                 )
 
-    # Mostrar historial de análisis
     if st.session_state.analysis_history:
         st.subheader("Analysis History")
         history_df = pd.DataFrame(st.session_state.analysis_history)
@@ -199,4 +173,4 @@ if analyzer:
         
         if st.button("Clear History"):
             st.session_state.analysis_history = []
-            st.rerun()  # <- Cambiar aquí
+            st.rerun()

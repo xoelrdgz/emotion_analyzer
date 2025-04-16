@@ -1,9 +1,9 @@
 import os
 import torch
 import matplotlib
-matplotlib.use('Agg')  # Backend no interactivo para evitar errores
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches  # Añadir esta línea
+import matplotlib.patches as patches
 import logging
 import sys
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
@@ -11,7 +11,6 @@ from colorama import Fore, Style, init
 from typing import List, Dict, Union, Optional
 from tqdm import tqdm
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 init(autoreset=True)
 
 class Config:
-    """Configuration class for the analyzer"""
     SENTIMENT_COLORS = {
         "positive": Fore.GREEN,
         "neutral": Fore.YELLOW,
@@ -35,7 +33,6 @@ class Config:
         "negative": '#e74c3c'   # Bright red
     }
     
-    # Emotion colors mapping
     EMOTION_COLORS = {
         'joy': '#2ecc71',       # Bright green
         'love': '#e84393',      # Pink
@@ -49,7 +46,6 @@ class Config:
         'hate': '#c0392b',      # Dark red
     }
     
-    # Map BERT sentiment ratings to simpler categories
     SENTIMENT_MAPPING = {
         '1 star': 'negative',
         '2 stars': 'negative',
@@ -73,7 +69,6 @@ class EmotionAnalyzer:
         self.emotion_classifier = None
         
     def load_model(self, model_name: str, model_dir: str):
-        """Load model with progress feedback and better error handling"""
         try:
             if not os.path.exists(model_dir):
                 logger.info(f"{model_name} model not found locally. Downloading...")
@@ -92,7 +87,6 @@ class EmotionAnalyzer:
             raise
 
     def initialize_models(self):
-        """Initialize both models with proper cleanup on failure"""
         try:
             sentiment_model_dir = "./sentiment_model"
             emotion_model_dir = "./emotion_model"
@@ -133,7 +127,6 @@ class EmotionAnalyzer:
             return False
 
     def cleanup(self):
-        """Clean up resources"""
         if hasattr(self, 'sentiment_model'):
             del self.sentiment_model
         if hasattr(self, 'emotion_model'):
@@ -142,7 +135,6 @@ class EmotionAnalyzer:
             torch.cuda.empty_cache()
 
     def validate_input(self, text: str) -> bool:
-        """Validate input text"""
         if not text or not text.strip():
             return False
         if len(text) > self.config.max_length:
@@ -151,15 +143,12 @@ class EmotionAnalyzer:
         return True
 
     def get_sentiment_category(self, label: str) -> str:
-        """Convert BERT sentiment label to simple category"""
         return self.config.SENTIMENT_MAPPING.get(label.lower(), 'neutral')
 
     def visualize_results(self, sentiment_label: str, sentiment_score: float, emotions: List[Dict], show_plot=True):
-        """Display emotions bar chart and sentiment indicator"""
         if not self.config.show_vis:
             return
             
-        # Filter emotions with less than 3% confidence
         filtered_emotions = [emo for emo in emotions if emo['score'] * 100 >= 3]
         
         if not filtered_emotions:
@@ -168,10 +157,8 @@ class EmotionAnalyzer:
             
         fig = plt.figure(figsize=(10, 5))
         
-        # Create main subplot for emotions
-        main_ax = plt.gca()
+        plt.gca()
         
-        # Emotions bar chart with specific colors
         labels = [emo['label'] for emo in filtered_emotions][::-1]
         scores = [emo['score'] * 100 for emo in filtered_emotions][::-1]
         colors = [self.config.EMOTION_COLORS.get(label.lower(), '#95a5a6') for label in labels]
@@ -180,11 +167,9 @@ class EmotionAnalyzer:
         plt.title('Emotions Analysis')
         plt.xlim(0, 100)
         
-        # Map the sentiment to a simple category
         sentiment_category = self.get_sentiment_category(sentiment_label)
         sentiment_color = self.config.PLOT_COLORS[sentiment_category]
         
-        # Create a separate axes for the sentiment square
         sentiment_ax = plt.axes([0.85, 0.85, 0.1, 0.1])
         sentiment_ax.add_patch(patches.Rectangle((0, 0), 1, 1, facecolor=sentiment_color))
         sentiment_ax.text(0.5, -0.5, sentiment_category.upper(), 
@@ -203,7 +188,7 @@ class EmotionAnalyzer:
         if show_plot and not matplotlib.get_backend() == 'agg':
             plt.show()
             
-        return fig  # Devolver la figura para permitir su uso en Streamlit
+        return fig
 
     def analyze(self, text: str) -> Optional[Dict]:
         try:
@@ -215,7 +200,6 @@ class EmotionAnalyzer:
             label = sentiment_result["label"].lower()
             score = sentiment_result["score"] * 100
 
-            # Map the sentiment to a simple category for display
             sentiment_category = self.get_sentiment_category(label)
             color = self.config.SENTIMENT_COLORS[sentiment_category]
             
@@ -227,7 +211,6 @@ class EmotionAnalyzer:
             emotion_result = self.emotion_classifier(text)[0]
             sorted_emotions = sorted(emotion_result, key=lambda x: x["score"], reverse=True)
             
-            # Filter emotions with less than 3% confidence for display
             filtered_emotions = [emo for emo in sorted_emotions if emo["score"] * 100 >= 3]
             
             if filtered_emotions:
@@ -255,10 +238,8 @@ class EmotionAnalyzer:
             return None
 
     def run_interactive(self):
-        """Run the analyzer in interactive mode"""
         print(f"\n{Fore.CYAN}Welcome to the Emotion and Sentiment Analyzer!")
         
-        # Ask for visualization preference
         while True:
             vis_pref = input(f"{Fore.CYAN}Would you like to see visualizations? (y/n): {Style.RESET_ALL}").strip().lower()
             if vis_pref in ['y', 'n']:
