@@ -153,7 +153,7 @@ class EmotionAnalyzer:
         """Convert BERT sentiment label to simple category"""
         return self.config.SENTIMENT_MAPPING.get(label.lower(), 'neutral')
 
-    def visualize_results(self, sentiment_label: str, sentiment_score: float, emotions: List[Dict]):
+    def visualize_results(self, sentiment_label: str, sentiment_score: float, emotions: List[Dict], show_plot=True):
         """Display emotions bar chart and sentiment indicator"""
         if not self.config.show_vis:
             return
@@ -165,7 +165,7 @@ class EmotionAnalyzer:
             logger.warning("No emotions with confidence above 3% threshold")
             return
             
-        plt.figure(figsize=(10, 5))
+        fig = plt.figure(figsize=(10, 5))
         
         # Create main subplot for emotions
         main_ax = plt.gca()
@@ -195,7 +195,12 @@ class EmotionAnalyzer:
         sentiment_ax.set_yticks([])
         
         plt.tight_layout()
-        plt.show()
+        
+        # Solo mostrar si no estamos en Streamlit
+        if show_plot:
+            plt.show()
+            
+        return fig  # Devolver la figura para permitir su uso en Streamlit
 
     def analyze(self, text: str) -> Optional[Dict]:
         """Analyze text and return results"""
