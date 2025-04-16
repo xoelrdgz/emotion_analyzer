@@ -1,7 +1,10 @@
-torch>=2.0.0
-transformers>=4.30.0
-colorama>=0.4.6
-sentencepiece>=0.1.99
-datasets>=2.12.0
-scikit-learn>=1.2.2
-accelerate>=0.26.0
+torch
+transformers
+matplotlib
+colorama
+numpy
+sentencepiece
+datasets
+scikit-learn
+accelerate
+tqdm
