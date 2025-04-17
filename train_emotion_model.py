@@ -41,24 +41,22 @@ def compute_metrics(eval_pred):
     acc = accuracy_score(labels, preds)
     return {"accuracy": acc, "f1": f1, "precision": precision, "recall": recall}
 
-# Model
-print("🧠 Loading model...")
+# Model initialization
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
 
+# Training arguments
 training_args = TrainingArguments(
     output_dir="./emotion_model",
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    learning_rate=2e-5,
+    num_train_epochs=epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    num_train_epochs=epochs,
+    learning_rate=2e-5,
     weight_decay=0.01,
-    load_best_model_at_end=True,
-    logging_dir="./logs_emotions",
+    logging_dir="./logs",
+    logging_steps=100,
 )
 
-print("🚀 Training...")
+# Initialize trainer
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -69,9 +67,11 @@ trainer = Trainer(
     compute_metrics=compute_metrics,
 )
 
+# Train model
+print("🚀 Starting training...")
 trainer.train()
 
-# Save model
-print("💾 Saving emotion model to ./emotion_model")
+# Save final model
+print("💾 Saving model...")
 trainer.save_model("./emotion_model")
 tokenizer.save_pretrained("./emotion_model")

@@ -3,7 +3,6 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trai
 from transformers import DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
-import torch
 
 # Configuration
 model_name = "distilbert-base-uncased"

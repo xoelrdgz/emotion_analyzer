@@ -37,7 +37,7 @@ A sophisticated Python application that performs real-time sentiment and emotion
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/xoelrdgz/emotion_analyzer
 cd emotion_analyzer
 ```
 
@@ -100,7 +100,6 @@ uvicorn api:app --reload
 - Model: `bhadresh-savani/bert-base-uncased-emotion`
 - Features:
   - Multi-emotion detection
-  - Confidence thresholding (3% minimum)
   - Detailed emotion breakdown
 
 ## 📊 Output Format
@@ -130,7 +129,7 @@ uvicorn api:app --reload
 
 ## 📄 License
 
-This project is licensed under the terms of the included LICENSE file.
+See [[LICENSE]]
 
 ## 🤝 Contributing
 

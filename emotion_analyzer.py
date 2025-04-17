@@ -6,10 +6,16 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import logging
 import sys
+import argparse
+import traceback
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from transformers.utils.hub import RepositoryNotFoundError, RevisionNotFoundError
 from colorama import Fore, Style, init
-from typing import List, Dict, Union, Optional
-from tqdm import tqdm
+from typing import Dict, List, Optional, Tuple
+from exceptions import (
+    EmotionAnalyzerError, ModelLoadError, TextValidationError,
+    AnalysisError, ThresholdError
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,6 +25,40 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 init(autoreset=True)
+
+class SentimentProcessor:
+    """Handles sentiment analysis result processing and mapping"""
+    
+    # Complete mapping for nlptown/bert-base-multilingual-uncased-sentiment model
+    SENTIMENT_LABELS = {
+        "1 star": ("negative", 0.2),
+        "2 stars": ("negative", 0.4),
+        "3 stars": ("neutral", 0.6),
+        "4 stars": ("positive", 0.8),
+        "5 stars": ("positive", 1.0),
+        # Additional mappings for other possible model outputs
+        "negative": ("negative", 0.3),
+        "positive": ("positive", 0.9),
+        "neutral": ("neutral", 0.5),
+        "mixed": ("neutral", 0.5)
+    }
+    
+    @classmethod
+    def process_sentiment(cls, label: str, score: float) -> Tuple[str, float, str]:
+        """
+        Process sentiment analysis results
+        Returns: (category, normalized_score, display_label)
+        """
+        label = label.lower()
+        if label in cls.SENTIMENT_LABELS:
+            category, base_score = cls.SENTIMENT_LABELS[label]
+            # Blend the model's confidence with our base mapping score
+            normalized_score = (base_score + score) / 2
+            return category, normalized_score * 100, label.upper()
+        
+        # Fallback for unknown labels
+        logger.warning(f"Unknown sentiment label encountered: {label}")
+        return "neutral", score * 100, label.upper()
 
 class Config:
     SENTIMENT_COLORS = {
@@ -33,6 +73,7 @@ class Config:
         "negative": '#e74c3c'   # Bright red
     }
     
+    # Complete mapping for bhadresh-savani/bert-base-uncased-emotion model
     EMOTION_COLORS = {
         'joy': '#2ecc71',       # Bright green
         'love': '#e84393',      # Pink
@@ -42,16 +83,28 @@ class Config:
         'surprise': '#f1c40f',  # Yellow
         'neutral': '#95a5a6',   # Gray
         'worry': '#e67e22',     # Orange
-        'happy': '#2ecc71',     # Bright green (same as joy)
+        'happy': '#2ecc71',     # Same as joy
         'hate': '#c0392b',      # Dark red
-    }
-    
-    SENTIMENT_MAPPING = {
-        '1 star': 'negative',
-        '2 stars': 'negative',
-        '3 stars': 'neutral',
-        '4 stars': 'positive',
-        '5 stars': 'positive'
+        'admiration': '#27ae60', # Dark green
+        'approval': '#16a085',  # Turquoise
+        'caring': '#9b59b6',    # Purple
+        'confusion': '#34495e', # Dark gray
+        'curiosity': '#3498db', # Blue
+        'desire': '#e74c3c',    # Red
+        'disappointment': '#95a5a6', # Gray
+        'disapproval': '#c0392b',    # Dark red
+        'disgust': '#d35400',   # Orange
+        'embarrassment': '#e67e22',  # Light orange
+        'excitement': '#f1c40f',     # Yellow
+        'gratitude': '#27ae60',      # Green
+        'grief': '#2c3e50',          # Dark blue
+        'nervousness': '#9b59b6',    # Purple
+        'optimism': '#2ecc71',       # Bright green
+        'pride': '#f39c12',          # Orange
+        'realization': '#3498db',     # Blue
+        'relief': '#1abc9c',         # Turquoise
+        'remorse': '#95a5a6',        # Gray
+        'annoyance': '#e74c3c'       # Red
     }
     
     def __init__(self):
@@ -67,7 +120,7 @@ class EmotionAnalyzer:
         self.emotion_model = None
         self.sentiment_classifier = None
         self.emotion_classifier = None
-        
+
     def load_model(self, model_name: str, model_dir: str):
         """Load a model from local storage or download it if not available"""
         try:
@@ -83,9 +136,12 @@ class EmotionAnalyzer:
                 model = AutoModelForSequenceClassification.from_pretrained(model_dir)
                 tokenizer = AutoTokenizer.from_pretrained(model_dir)
             return model, tokenizer
+        except (RepositoryNotFoundError, RevisionNotFoundError) as e:
+            raise ModelLoadError(f"Model {model_name} not found: {str(e)}")
+        except OSError as e:
+            raise ModelLoadError(f"File system error while loading {model_name}: {str(e)}")
         except Exception as e:
-            logger.error(f"Failed to load {model_name}: {str(e)}")
-            raise
+            raise ModelLoadError(f"Unexpected error loading {model_name}: {str(e)}")
 
     def initialize_models(self):
         """Initialize the sentiment and emotion models"""
@@ -123,28 +179,40 @@ class EmotionAnalyzer:
                 top_k=None
             )
             return True
-        except Exception as e:
-            logger.error(f"Error initializing models: {str(e)}")
+        except ModelLoadError as e:
+            logger.error(str(e))
             self.cleanup()
             return False
-
-    def cleanup(self):
-        """Clean up resources and free GPU memory"""
-        if hasattr(self, 'sentiment_model'):
-            del self.sentiment_model
-        if hasattr(self, 'emotion_model'):
-            del self.emotion_model
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        except torch.cuda.OutOfMemoryError as e:
+            logger.error(f"GPU memory error: {str(e)}")
+            self.cleanup()
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error initializing models: {str(e)}")
+            self.cleanup()
+            return False
 
     def validate_input(self, text: str) -> bool:
         """Validate the input text"""
         if not text or not text.strip():
-            return False
+            raise TextValidationError("Input text cannot be empty")
         if len(text) > self.config.max_length:
-            logger.warning(f"Text exceeds maximum length of {self.config.max_length} characters")
-            return False
+            raise TextValidationError(
+                f"Text length ({len(text)}) exceeds maximum allowed length ({self.config.max_length})"
+            )
         return True
+
+    def cleanup(self):
+        """Clean up resources and free GPU memory"""
+        try:
+            if hasattr(self, 'sentiment_model'):
+                del self.sentiment_model
+            if hasattr(self, 'emotion_model'):
+                del self.emotion_model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
 
     def get_sentiment_category(self, label: str) -> str:
         """Get the sentiment category (positive/neutral/negative) from the model label"""
@@ -200,30 +268,41 @@ class EmotionAnalyzer:
         """Analyze the sentiment and emotions in a text"""
         try:
             if not self.validate_input(text):
-                logger.error("Invalid input text")
-                return None
+                raise TextValidationError("Invalid input text")
 
             # Get sentiment analysis
-            sentiment_result = self.sentiment_classifier(text)[0]
-            label = sentiment_result["label"].lower()
-            score = sentiment_result["score"] * 100
+            try:
+                sentiment_result = self.sentiment_classifier(text)[0]
+            except Exception as e:
+                raise AnalysisError(f"Sentiment analysis failed: {str(e)}")
 
-            sentiment_category = self.get_sentiment_category(label)
+            label = sentiment_result["label"]
+            score = sentiment_result["score"]
+
+            # Process sentiment
+            try:
+                sentiment_category, normalized_score, display_label = SentimentProcessor.process_sentiment(label, score)
+            except Exception as e:
+                raise AnalysisError(f"Error processing sentiment: {str(e)}")
+
             color = self.config.SENTIMENT_COLORS[sentiment_category]
             
             print(f"\nSentiment Analysis:")
-            print(f"{color}Sentiment: {label.upper()} ({score:.2f}% confidence)")
+            print(f"{color}Sentiment: {display_label} ({normalized_score:.2f}% confidence)")
             print(f"Category: {sentiment_category.upper()}")
 
-            print("\nEmotion Analysis:")
-            emotion_result = self.emotion_classifier(text)[0]
+            # Get emotion analysis
+            try:
+                emotion_result = self.emotion_classifier(text)[0]
+            except Exception as e:
+                raise AnalysisError(f"Emotion analysis failed: {str(e)}")
+
             sorted_emotions = sorted(emotion_result, key=lambda x: x["score"], reverse=True)
             
-            filtered_emotions = sorted_emotions
-            
-            if filtered_emotions:
-                max_label_length = max(len(emo["label"]) for emo in filtered_emotions)
-                for emo in filtered_emotions:
+            print("\nEmotion Analysis:")
+            if sorted_emotions:
+                max_label_length = max(len(emo["label"]) for emo in sorted_emotions)
+                for emo in sorted_emotions:
                     percent = emo["score"] * 100
                     bar_length = int(percent / 5)
                     bar = "█" * bar_length
@@ -232,17 +311,26 @@ class EmotionAnalyzer:
                 print("No emotions detected")
 
             if self.config.show_vis:
-                self.visualize_results(label, score, sorted_emotions)
+                self.visualize_results(display_label, normalized_score, sorted_emotions)
 
             return {
-                "sentiment": {"label": label, "score": score},
-                "emotions": filtered_emotions
+                "sentiment": {
+                    "label": display_label,
+                    "score": normalized_score,
+                    "category": sentiment_category
+                },
+                "emotions": sorted_emotions
             }
 
+        except TextValidationError as e:
+            logger.error(f"Input validation error: {str(e)}")
+            return None
+        except AnalysisError as e:
+            logger.error(f"Analysis error: {str(e)}")
+            return None
         except Exception as e:
-            logging.error(f"Error analyzing text: {str(e)}")
-            import traceback
-            logging.error(traceback.format_exc())
+            logger.error(f"Unexpected error during analysis: {str(e)}")
+            logger.error(traceback.format_exc())
             return None
 
     def run_interactive(self):
