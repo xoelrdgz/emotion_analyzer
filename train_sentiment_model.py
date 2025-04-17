@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
 import torch
 
-# Config
+# Configuration
 model_name = "distilbert-base-uncased"
 num_labels = 3
 batch_size = 8
@@ -15,13 +15,13 @@ imdb = load_dataset("imdb", split="train").shuffle(seed=42).select(range(10000))
 amazon = load_dataset("amazon_polarity", split="train").shuffle(seed=42).select(range(10000))
 yelp = load_dataset("yelp_polarity", split="train").shuffle(seed=42).select(range(10000))
 
-# Definir features comunes
+# Define common features
 common_features = Features({
     'text': Value('string'),
     'label': ClassLabel(names=['negative', 'positive'])
 })
 
-# Función para estandarizar el formato
+# Function to standardize the format
 def standardize_dataset(example, is_amazon=False):
     if is_amazon:
         text = example["content"]
@@ -29,10 +29,10 @@ def standardize_dataset(example, is_amazon=False):
         text = example["text"]
     return {
         "text": text,
-        "label": 0 if example["label"] == 1 else 1  # Invertimos para que sea 0=negative, 1=positive
+        "label": 0 if example["label"] == 1 else 1  # Invert so that 0=negative, 1=positive
     }
 
-# Estandarizar cada dataset
+# Standardize each dataset
 imdb = imdb.map(standardize_dataset, remove_columns=imdb.column_names).cast(common_features)
 amazon = amazon.map(
     lambda x: standardize_dataset(x, is_amazon=True), 
@@ -40,7 +40,7 @@ amazon = amazon.map(
 ).cast(common_features)
 yelp = yelp.map(standardize_dataset, remove_columns=yelp.column_names).cast(common_features)
 
-# Concatenar los datasets
+# Concatenate the datasets
 dataset = concatenate_datasets([imdb, amazon, yelp]).shuffle(seed=42)
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)

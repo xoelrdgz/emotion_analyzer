@@ -1,108 +1,141 @@
-# Emotion and Sentiment Analyzer
+# Emotion and Sentiment Analyzer 🎭
 
-A Python-based tool that analyzes both sentiment and emotions in text using state-of-the-art BERT models.
+A sophisticated Python application that performs real-time sentiment and emotion analysis using state-of-the-art BERT models. This tool combines powerful deep learning capabilities with an intuitive interface to analyze text and provide detailed emotional insights.
 
-## Features
+## 🌟 Key Features
 
-- Real-time sentiment analysis (positive/neutral/negative) with confidence scores
-- Detailed emotion analysis with confidence scores and filtering
-- Interactive visualization with:
-  - Color-coded emotion bar charts
-  - Sentiment indicator
+- 📊 **Dual Analysis**
+  - Sentiment classification (positive/neutral/negative) with confidence scores
+  - Detailed emotion analysis with percentage breakdowns
+  - Multi-emotion detection with confidence filtering
+
+- 🎨 **Rich Visualizations**
+  - Interactive emotion bar charts
+  - Color-coded sentiment indicators
+  - Real-time visual feedback
   - Configurable display options
-- Support for both CPU and GPU processing
-- Color-coded terminal output for better readability
-- Offline capability (models are saved locally after first run)
-- Batch processing support
-- Configurable text length limits
 
-## Requirements
+- ⚡ **Performance**
+  - GPU acceleration support
+  - Batch processing capabilities
+  - Configurable text length limits
+  - Offline mode with local model storage
 
-- Python 3.7+
+- 🛠️ **User Experience**
+  - Interactive command-line interface
+  - Color-coded terminal output
+  - Comprehensive error handling
+  - Detailed progress logging
+
+## 📋 Requirements
+
+- Python 3.7 or higher
 - CUDA-compatible GPU (optional, for faster processing)
-- Required Python packages (installed via requirements.txt):
-  - torch
-  - transformers
-  - colorama
-  - matplotlib
-  - tqdm
 
-## Installation
+## 📦 Installation
 
-1. Clone this repository:
+1. Clone the repository:
 
 ```bash
 git clone <repository-url>
 cd emotion_analyzer
 ```
 
-2. Install the required packages:
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+## 🚀 Usage
 
-### Basic Usage
+### Command Line Interface
 
-Run the analyzer in interactive mode:
+Basic usage:
 
 ```bash
 python emotion_analyzer.py
 ```
 
-### Command Line Arguments
-
-The following command-line options are available:
-
-- `--no-vis`: Disable visualization of results
-- `--batch-size N`: Set the batch size for processing (default: 8)
-- `--max-length N`: Set maximum text length (default: 512)
-
-Example with arguments:
+Available options:
 
 ```bash
-python emotion_analyzer.py --no-vis --batch-size 16 --max-length 256
+python emotion_analyzer.py [--no-vis] [--batch-size N] [--max-length N]
 ```
 
-### Interactive Mode
+Arguments:
 
-- Enter text when prompted to analyze
-- Choose whether to display visualizations
-- Press 'q', 'quit', 'exit', or Ctrl+C to exit
-- Results show:
-  - Sentiment analysis with confidence score
-  - Emotion analysis with confidence percentages
-  - Visual bar chart (if enabled)
-  - Color-coded terminal output
+- `--no-vis`: Disable visualization output
+- `--batch-size N`: Set processing batch size (default: 8)
+- `--max-length N`: Maximum text length to process (default: 512)
 
-## Models Used
+### Web Interface
 
-- Sentiment Analysis: `nlptown/bert-base-multilingual-uncased-sentiment`
-  - Provides 1-5 star ratings mapped to positive/neutral/negative
-- Emotion Analysis: `bhadresh-savani/bert-base-uncased-emotion`
-  - Detects multiple emotions with confidence scores
-  - Filters out emotions with less than 3% confidence
+Start the web application:
 
-## Output Format
+```bash
+streamlit run streamlit_app.py
+```
 
-- Sentiment Analysis shows:
-  - Rating (1-5 stars)
-  - Simplified category (positive/neutral/negative)
-  - Confidence score
-- Emotion Analysis shows:
-  - Individual emotions with confidence percentages
-  - Visual bar chart representation
-  - Color-coded visualization
+### API Server
 
-## Error Handling
+Launch the REST API:
 
-- Input validation for text length
-- Graceful handling of model loading errors
-- Proper resource cleanup
+```bash
+uvicorn api:app --reload
+```
+
+## 🧠 Models
+
+### Sentiment Analysis
+
+- Model: `nlptown/bert-base-multilingual-uncased-sentiment`
+- Features:
+  - 5-star rating system
+  - Mapped to positive/neutral/negative categories
+  - Confidence scoring
+
+### Emotion Analysis
+
+- Model: `bhadresh-savani/bert-base-uncased-emotion`
+- Features:
+  - Multi-emotion detection
+  - Confidence thresholding (3% minimum)
+  - Detailed emotion breakdown
+
+## 📊 Output Format
+
+### Sentiment Results
+
+- Rating classification
+- Sentiment category
+- Confidence percentage
+- Color-coded indicators
+
+### Emotion Results
+
+- Multiple emotion detection
+- Confidence percentages
+- Visual bar charts
+- Color-coded output
+
+## 🔧 Advanced Features
+
+- Batch text processing
+- GPU acceleration
+- Local model caching
+- Configurable visualization
 - Comprehensive logging
+- Error handling and recovery
 
-## License
+## 📄 License
 
-See the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the included LICENSE file.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📚 Documentation
+
+For detailed API documentation and integration examples, see the `api.py` and `service.py` files.

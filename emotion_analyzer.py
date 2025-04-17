@@ -69,6 +69,7 @@ class EmotionAnalyzer:
         self.emotion_classifier = None
         
     def load_model(self, model_name: str, model_dir: str):
+        """Load a model from local storage or download it if not available"""
         try:
             if not os.path.exists(model_dir):
                 logger.info(f"{model_name} model not found locally. Downloading...")
@@ -87,6 +88,7 @@ class EmotionAnalyzer:
             raise
 
     def initialize_models(self):
+        """Initialize the sentiment and emotion models"""
         try:
             sentiment_model_dir = "./sentiment_model"
             emotion_model_dir = "./emotion_model"
@@ -127,6 +129,7 @@ class EmotionAnalyzer:
             return False
 
     def cleanup(self):
+        """Clean up resources and free GPU memory"""
         if hasattr(self, 'sentiment_model'):
             del self.sentiment_model
         if hasattr(self, 'emotion_model'):
@@ -135,6 +138,7 @@ class EmotionAnalyzer:
             torch.cuda.empty_cache()
 
     def validate_input(self, text: str) -> bool:
+        """Validate the input text"""
         if not text or not text.strip():
             return False
         if len(text) > self.config.max_length:
@@ -143,9 +147,11 @@ class EmotionAnalyzer:
         return True
 
     def get_sentiment_category(self, label: str) -> str:
+        """Get the sentiment category (positive/neutral/negative) from the model label"""
         return self.config.SENTIMENT_MAPPING.get(label.lower(), 'neutral')
 
     def visualize_results(self, sentiment_label: str, sentiment_score: float, emotions: List[Dict], show_plot=True):
+        """Create a visualization of the analysis results"""
         if not self.config.show_vis:
             return
             
@@ -191,11 +197,13 @@ class EmotionAnalyzer:
         return fig
 
     def analyze(self, text: str) -> Optional[Dict]:
+        """Analyze the sentiment and emotions in a text"""
         try:
             if not self.validate_input(text):
                 logger.error("Invalid input text")
                 return None
 
+            # Get sentiment analysis
             sentiment_result = self.sentiment_classifier(text)[0]
             label = sentiment_result["label"].lower()
             score = sentiment_result["score"] * 100
@@ -238,6 +246,7 @@ class EmotionAnalyzer:
             return None
 
     def run_interactive(self):
+        """Run the analyzer in interactive mode"""
         print(f"\n{Fore.CYAN}Welcome to the Emotion and Sentiment Analyzer!")
         
         while True:
@@ -264,6 +273,7 @@ class EmotionAnalyzer:
                 logger.error(f"An error occurred: {str(e)}")
 
 def main():
+    """Main entry point"""
     parser = argparse.ArgumentParser(description='Emotion and Sentiment Analyzer')
     parser.add_argument('--no-vis', action='store_true', help='Disable visualization of results')
     parser.add_argument('--batch-size', type=int, default=8, help='Batch size for processing')
