@@ -1,3 +1,31 @@
+"""Sentiment Analysis Model Training Script.
+
+This script handles the fine-tuning of a pre-trained BERT model for sentiment analysis
+using the nlptown/bert-base-multilingual-uncased-sentiment dataset. It implements a 
+complete training pipeline including data preprocessing, model configuration, training 
+loop, and model evaluation.
+
+The trained model will be saved in the ./sentiment_model directory and can be used
+by the Emotion Analyzer application for inference.
+
+Requirements:
+    - PyTorch
+    - Transformers
+    - Datasets
+    - NumPy
+    - scikit-learn
+    - tqdm
+
+Model Architecture:
+    Base: bert-base-multilingual-uncased
+    Task: Multi-class sentiment classification
+    Output Classes: 1-5 stars (mapped to negative/neutral/positive)
+    Languages: Supports multiple languages
+    
+Usage:
+    python train_sentiment_model.py [--epochs N] [--batch_size N] [--learning_rate N]
+"""
+
 from datasets import load_dataset, concatenate_datasets, Features, ClassLabel, Value
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
 from transformers import DataCollatorWithPadding
