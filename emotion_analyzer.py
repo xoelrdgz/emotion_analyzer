@@ -68,38 +68,36 @@ class Config:
         "negative": '#e74c3c'   # Bright red
     }
     
-    # Complete mapping for bhadresh-savani/bert-base-uncased-emotion model
+    # Updated emotion colors for go_emotions model
     EMOTION_COLORS = {
-        'joy': '#2ecc71',       # Bright green
-        'love': '#e84393',      # Pink
-        'anger': '#e74c3c',     # Red
-        'fear': '#8e44ad',      # Purple
-        'sadness': '#3498db',   # Blue
-        'surprise': '#f1c40f',  # Yellow
-        'neutral': '#95a5a6',   # Gray
-        'worry': '#e67e22',     # Orange
-        'happy': '#2ecc71',     # Same as joy
-        'hate': '#c0392b',      # Dark red
-        'admiration': '#27ae60', # Dark green
-        'approval': '#16a085',  # Turquoise
-        'caring': '#9b59b6',    # Purple
-        'confusion': '#34495e', # Dark gray
-        'curiosity': '#3498db', # Blue
-        'desire': '#e74c3c',    # Red
+        'admiration': '#27ae60',  # Dark green
+        'amusement': '#f1c40f',   # Yellow
+        'anger': '#e74c3c',       # Red
+        'annoyance': '#c0392b',   # Dark red
+        'approval': '#16a085',    # Turquoise
+        'caring': '#9b59b6',      # Purple
+        'confusion': '#34495e',   # Dark gray
+        'curiosity': '#3498db',   # Blue
+        'desire': '#e67e22',      # Orange
         'disappointment': '#95a5a6', # Gray
         'disapproval': '#c0392b',    # Dark red
-        'disgust': '#d35400',   # Orange
-        'embarrassment': '#e67e22',  # Light orange
-        'excitement': '#f1c40f',     # Yellow
-        'gratitude': '#27ae60',      # Green
-        'grief': '#2c3e50',          # Dark blue
-        'nervousness': '#9b59b6',    # Purple
-        'optimism': '#2ecc71',       # Bright green
-        'pride': '#f39c12',          # Orange
-        'realization': '#3498db',     # Blue
-        'relief': '#1abc9c',         # Turquoise
-        'remorse': '#95a5a6',        # Gray
-        'annoyance': '#e74c3c'       # Red
+        'disgust': '#d35400',     # Orange 
+        'embarrassment': '#e67e22',# Light orange
+        'excitement': '#f39c12',   # Light orange
+        'fear': '#8e44ad',        # Purple
+        'gratitude': '#27ae60',    # Green
+        'grief': '#2c3e50',       # Dark blue
+        'joy': '#2ecc71',         # Bright green
+        'love': '#e84393',        # Pink
+        'nervousness': '#9b59b6',  # Purple
+        'optimism': '#2ecc71',     # Bright green
+        'pride': '#f39c12',        # Orange
+        'realization': '#3498db',   # Blue
+        'relief': '#1abc9c',       # Turquoise
+        'remorse': '#95a5a6',      # Gray
+        'sadness': '#3498db',      # Blue
+        'surprise': '#f1c40f',     # Yellow
+        'neutral': '#95a5a6'       # Gray
     }
     
     def __init__(self):
@@ -149,7 +147,7 @@ class EmotionAnalyzer:
                 sentiment_model_dir
             )
             self.emotion_model, emotion_tokenizer = self.load_model(
-                "bhadresh-savani/bert-base-uncased-emotion", 
+                "SamLowe/roberta-base-go_emotions", 
                 emotion_model_dir
             )
 
