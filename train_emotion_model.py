@@ -4,22 +4,22 @@ from transformers import DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
 
-# Config
+# Configuration
 model_name = "distilbert-base-uncased"
 batch_size = 8
 epochs = 3
-num_labels = 28  # 27 emociones + neutral
+num_labels = 28  # 27 emotions + neutral
 
 print("📥 Loading GoEmotions dataset...")
 dataset = load_dataset("go_emotions", "simplified")
 
-# Usaremos solo una etiqueta por entrada (la primera)
+# We'll use only one label per input (the first one)
 def simplify_labels(example):
     return {"label": example["labels"][0]}
 
 dataset = dataset.map(simplify_labels)
 
-# Tokenización
+# Tokenization
 print("🔤 Tokenizing...")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -28,12 +28,12 @@ def tokenize(example):
 
 tokenized = dataset.map(tokenize, batched=True)
 
-# Dividir en train/test
+# Split into train/test
 split = tokenized["train"].train_test_split(test_size=0.1)
 
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-# Métricas
+# Metrics
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
@@ -41,7 +41,7 @@ def compute_metrics(eval_pred):
     acc = accuracy_score(labels, preds)
     return {"accuracy": acc, "f1": f1, "precision": precision, "recall": recall}
 
-# Modelo
+# Model
 print("🧠 Loading model...")
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
 
@@ -71,7 +71,7 @@ trainer = Trainer(
 
 trainer.train()
 
-# Guardar modelo
+# Save model
 print("💾 Saving emotion model to ./emotion_model")
 trainer.save_model("./emotion_model")
 tokenizer.save_pretrained("./emotion_model")
