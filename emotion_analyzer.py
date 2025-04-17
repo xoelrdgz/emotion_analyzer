@@ -13,8 +13,8 @@ from transformers.utils.hub import RepositoryNotFoundError, RevisionNotFoundErro
 from colorama import Fore, Style, init
 from typing import Dict, List, Optional, Tuple
 from exceptions import (
-    EmotionAnalyzerError, ModelLoadError, TextValidationError,
-    AnalysisError, ThresholdError
+    ModelLoadError, TextValidationError,
+    AnalysisError
 )
 
 logging.basicConfig(
@@ -35,12 +35,7 @@ class SentimentProcessor:
         "2 stars": ("negative", 0.4),
         "3 stars": ("neutral", 0.6),
         "4 stars": ("positive", 0.8),
-        "5 stars": ("positive", 1.0),
-        # Additional mappings for other possible model outputs
-        "negative": ("negative", 0.3),
-        "positive": ("positive", 0.9),
-        "neutral": ("neutral", 0.5),
-        "mixed": ("neutral", 0.5)
+        "5 stars": ("positive", 1.0)
     }
     
     @classmethod

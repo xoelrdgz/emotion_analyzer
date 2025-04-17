@@ -412,7 +412,6 @@ def display_sentiment_card(sentiment, col):
         
         st.markdown(f"""
         <div class="sentiment-card {sentiment_category}">
-            <h3>Detected Sentiment</h3>
             <h1>{sentiment_label}</h1>
             <p>Category: <strong>{sentiment_category.upper()}</strong></p>
             <p>Confidence: <strong>{sentiment_score:.2f}%</strong></p>
@@ -643,7 +642,6 @@ def display_sentiment_card(sentiment, col):
         
         st.markdown(f"""
         <div class="sentiment-card {sentiment_category}">
-            <h3>Detected Sentiment</h3>
             <h1>{sentiment_label}</h1>
             <p>Category: <strong>{sentiment_category.upper()}</strong></p>
             <p>Confidence: <strong>{sentiment_score:.2f}%</strong></p>
@@ -730,8 +728,6 @@ def handle_analysis_result(result, text):
             display_sentiment_card(result["result"]["sentiment"], col_sentiment)
             display_emotions_chart(result["result"]["emotions"], col_emotions)
             
-            # Advanced visualization section
-            st.subheader("🔍 Advanced Visualization")
             display_radar_chart(result["result"]["emotions"])
         except KeyError as e:
             st.error(f"Invalid result format: missing {str(e)}")

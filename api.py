@@ -1,3 +1,9 @@
+"""FastAPI-based REST API for emotion and sentiment analysis.
+
+This module provides endpoints for analyzing text using BERT-based models for emotion and sentiment detection.
+It implements asynchronous processing and Server-Sent Events (SSE) for real-time result streaming.
+"""
+
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import RedirectResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, field_validator
@@ -19,12 +25,19 @@ app = FastAPI(
 service = EmotionService()
 
 class TextRequest(BaseModel):
+    """Request model for text analysis.
+    
+    Attributes:
+        text (str): The input text to analyze
+        threshold (float): Confidence threshold for emotion detection (0-1)
+    """
     text: str
     threshold: float = 0.03
     
     @field_validator('threshold')
     @classmethod
     def validate_threshold(cls, v):
+        """Validate that threshold is within acceptable range."""
         if not 0 <= v <= 1:
             raise ValueError("Threshold must be between 0 and 1")
         return v
@@ -32,25 +45,46 @@ class TextRequest(BaseModel):
     @field_validator('text')
     @classmethod
     def validate_text(cls, v):
+        """Validate that input text is not empty or whitespace."""
         if not v or not v.strip():
             raise ValueError("Text cannot be empty")
         return v.strip()
 
 class AnalysisResponse(BaseModel):
+    """Response model for analysis requests and results.
+    
+    Attributes:
+        job_id (str): Unique identifier for the analysis job
+        status (str): Current status of the analysis
+        result (Optional[dict]): Analysis results when complete
+        message (Optional[str]): Additional status or error information
+    """
     job_id: str
     status: str
     result: Optional[dict] = None
     message: Optional[str] = None
 
 class ErrorResponse(BaseModel):
+    """Standard error response model.
+    
+    Attributes:
+        status (str): Always "error" for error responses
+        error (str): Error type or category
+        detail (Optional[str]): Detailed error message
+    """
     status: str = "error"
     error: str
     detail: Optional[str] = None
 
+# Dictionary to store analysis jobs and their results
 analysis_jobs = {}
 
 @app.exception_handler(EmotionAnalyzerError)
 async def emotion_analyzer_exception_handler(request: Request, exc: EmotionAnalyzerError):
+    """Global exception handler for EmotionAnalyzerError and its subclasses.
+    
+    Maps specific exceptions to appropriate HTTP status codes and error messages.
+    """
     error_mapping = {
         TextValidationError: (422, "Invalid input text"),
         ThresholdError: (422, "Invalid threshold value"),
@@ -70,7 +104,15 @@ async def emotion_analyzer_exception_handler(request: Request, exc: EmotionAnaly
     )
 
 async def event_generator(request: Request, job_id: str) -> AsyncGenerator[str, None]:
-    """Generate SSE events for a specific analysis job"""
+    """Generate Server-Sent Events for analysis job status updates.
+    
+    Args:
+        request: FastAPI request object for connection management
+        job_id: Unique identifier for the analysis job
+        
+    Yields:
+        SSE-formatted JSON strings containing job status updates
+    """
     while True:
         if await request.is_disconnected():
             break
@@ -85,25 +127,24 @@ async def event_generator(request: Request, job_id: str) -> AsyncGenerator[str, 
             break
 
         yield f"data: {json.dumps({'status': job['status']})}\n\n"
-        await asyncio.sleep(0.5)  # Reduced polling interval for SSE
+        await asyncio.sleep(0.5)
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Redirect to API documentation"""
+    """Redirect root endpoint to API documentation."""
     return RedirectResponse(url="/docs")
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_text(request: TextRequest, background_tasks: BackgroundTasks):
-    """
-    Analyze text for emotions and sentiment.
+    """Initialize asynchronous text analysis.
     
     Args:
-        text: The text to analyze
-        threshold: Confidence threshold for emotions (0-1)
+        request: TextRequest containing text to analyze and threshold
+        background_tasks: FastAPI background task manager
         
     Returns:
-        Analysis job details with status
-    
+        AnalysisResponse with job ID and initial status
+        
     Raises:
         422: Invalid input parameters
         500: Server processing error
@@ -126,11 +167,13 @@ async def analyze_text(request: TextRequest, background_tasks: BackgroundTasks):
 
 @app.get("/stream/{job_id}")
 async def stream_result(request: Request, job_id: str):
-    """
-    Stream analysis results using Server-Sent Events.
+    """Stream analysis results using Server-Sent Events (SSE).
+    
+    Provides real-time updates on analysis progress and final results.
     
     Args:
-        job_id: The ID of the analysis job to stream
+        request: FastAPI request object
+        job_id: Unique identifier for the analysis job
         
     Returns:
         SSE stream of analysis progress and results
@@ -149,14 +192,15 @@ async def stream_result(request: Request, job_id: str):
 
 @app.get("/result/{job_id}", response_model=AnalysisResponse)
 async def get_result(job_id: str):
-    """
-    Get analysis results by job ID.
+    """Retrieve analysis results by job ID.
+    
+    Provides a non-streaming alternative to get analysis results.
     
     Args:
-        job_id: The ID of the analysis job
+        job_id: Unique identifier for the analysis job
         
     Returns:
-        Analysis results if available
+        AnalysisResponse containing results if analysis is complete
         
     Raises:
         404: Job not found
