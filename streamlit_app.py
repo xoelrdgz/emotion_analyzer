@@ -22,6 +22,16 @@ if 'text_input_value' not in st.session_state:
 
 st.set_page_config(page_title="Emotion Analyzer", layout="wide")
 
+threshold = st.sidebar.slider(
+    "Emotion confidence threshold (%)", 0, 100, 3,
+    help="Filter out emotions below this confidence level"
+)
+wc_colormap = st.sidebar.selectbox(
+    "Word Cloud colormap",
+    ['viridis', 'plasma', 'inferno', 'magma', 'cividis'],
+    index=0
+)
+
 @st.cache_resource
 def get_analyzer():
     config = Config()
@@ -94,10 +104,17 @@ if analyzer:
                 with col2:
                     st.subheader("Emotion Analysis")
                     
-                    for emotion in results["emotions"]:
-                        score = emotion["score"] * 100
-                        st.progress(score / 100)
-                        st.write(f"{emotion['label']}: {score:.2f}%")
+                    filtered_emotions = [
+                        emo for emo in results["emotions"]
+                        if emo["score"] * 100 >= threshold
+                    ]
+                    if filtered_emotions:
+                        for emotion in filtered_emotions:
+                            score = emotion["score"] * 100
+                            st.progress(score / 100)
+                            st.write(f"{emotion['label']}: {score:.2f}%")
+                    else:
+                        st.info("No emotions exceed the confidence threshold.")
                 
                 st.subheader("Text Analysis")
                 
@@ -123,7 +140,7 @@ if analyzer:
                                 height=400, 
                                 background_color='white',
                                 contour_width=1,
-                                colormap='viridis',
+                                colormap=wc_colormap,
                                 max_words=100,
                                 stopwords=stopwords,
                                 min_font_size=10,

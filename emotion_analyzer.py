@@ -149,10 +149,10 @@ class EmotionAnalyzer:
         if not self.config.show_vis:
             return
             
-        filtered_emotions = [emo for emo in emotions if emo['score'] * 100 >= 3]
+        filtered_emotions = emotions
         
         if not filtered_emotions:
-            logger.warning("No emotions with confidence above 3% threshold")
+            logger.warning("No emotions detected")
             return
             
         fig = plt.figure(figsize=(10, 5))
@@ -211,7 +211,7 @@ class EmotionAnalyzer:
             emotion_result = self.emotion_classifier(text)[0]
             sorted_emotions = sorted(emotion_result, key=lambda x: x["score"], reverse=True)
             
-            filtered_emotions = [emo for emo in sorted_emotions if emo["score"] * 100 >= 3]
+            filtered_emotions = sorted_emotions
             
             if filtered_emotions:
                 max_label_length = max(len(emo["label"]) for emo in filtered_emotions)
@@ -221,7 +221,7 @@ class EmotionAnalyzer:
                     bar = "█" * bar_length
                     print(f"{emo['label']:<{max_label_length}}: {percent:>6.2f}% {Fore.BLUE}{bar}{Style.RESET_ALL}")
             else:
-                print("No emotions detected with confidence above 3%")
+                print("No emotions detected")
 
             if self.config.show_vis:
                 self.visualize_results(label, score, sorted_emotions)
