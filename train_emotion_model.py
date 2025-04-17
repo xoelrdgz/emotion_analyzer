@@ -1,9 +1,8 @@
 """Emotion Detection Model Training Script.
 
-This script handles the fine-tuning of a pre-trained BERT model for emotion detection
-using the bhadresh-savani/bert-base-uncased-emotion dataset. It implements a complete
-training pipeline including data preprocessing, model configuration, training loop,
-and model evaluation.
+This script handles the fine-tuning of RoBERTa model for emotion detection
+using the go_emotions dataset. It implements a complete training pipeline 
+including data preprocessing, model configuration, training loop, and model evaluation.
 
 The trained model will be saved in the ./emotion_model directory and can be used
 by the Emotion Analyzer application for inference.
@@ -17,9 +16,9 @@ Requirements:
     - tqdm
 
 Model Architecture:
-    Base: bert-base-uncased
-    Task: Multi-class emotion classification
-    Output Classes: joy, sadness, anger, fear, love, surprise, etc.
+    Base: roberta-base
+    Task: Multi-label emotion classification
+    Output Classes: 28 emotions from go_emotions dataset
     
 Usage:
     python train_emotion_model.py [--epochs N] [--batch_size N] [--learning_rate N]
@@ -48,17 +47,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class EmotionDataset(Dataset):
-    """Custom dataset for emotion classification task.
-    
-    This class handles the preprocessing of text data and conversion to
-    tensor format required by PyTorch.
-    
-    Attributes:
-        texts (list): List of input text samples
-        labels (list): List of corresponding emotion labels
-        tokenizer: BERT tokenizer for text preprocessing
-        max_length (int): Maximum sequence length for padding/truncation
-    """
     def __init__(self, texts, labels, tokenizer, max_length=128):
         self.texts = texts
         self.labels = labels
@@ -72,7 +60,6 @@ class EmotionDataset(Dataset):
         text = str(self.texts[idx])
         label = self.labels[idx]
         
-        # Tokenize and prepare for BERT
         encoding = self.tokenizer(
             text,
             truncation=True,
@@ -84,43 +71,27 @@ class EmotionDataset(Dataset):
         return {
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
-            'label': torch.tensor(label, dtype=torch.long)
+            'labels': torch.tensor(label, dtype=torch.float)
         }
 
 def load_data():
-    """Load and preprocess the emotion dataset.
-    
-    Returns:
-        tuple: Training and validation datasets
-    """
-    logger.info("Loading emotion dataset...")
-    dataset = load_dataset("bhadresh-savani/bert-base-uncased-emotion")
+    """Load and preprocess the emotion dataset."""
+    logger.info("Loading go_emotions dataset...")
+    dataset = load_dataset("go_emotions")
     
     return dataset['train'], dataset['validation']
 
 def train_epoch(model, train_loader, optimizer, scheduler, device):
-    """Train the model for one epoch.
-    
-    Args:
-        model: The BERT model instance
-        train_loader: DataLoader for training data
-        optimizer: Optimization algorithm
-        scheduler: Learning rate scheduler
-        device: Device to run training on (CPU/GPU)
-        
-    Returns:
-        float: Average training loss for the epoch
-    """
+    """Train the model for one epoch"""
     model.train()
     total_loss = 0
-    progress_bar = tqdm(train_loader, desc="Training")
     
-    for batch in progress_bar:
+    for batch in tqdm(train_loader, desc="Training"):
         optimizer.zero_grad()
         
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
-        labels = batch['label'].to(device)
+        labels = batch['labels'].to(device)
         
         outputs = model(
             input_ids=input_ids,
@@ -134,22 +105,11 @@ def train_epoch(model, train_loader, optimizer, scheduler, device):
         loss.backward()
         optimizer.step()
         scheduler.step()
-        
-        progress_bar.set_postfix({'loss': loss.item()})
     
     return total_loss / len(train_loader)
 
 def evaluate(model, eval_loader, device):
-    """Evaluate the model on validation data.
-    
-    Args:
-        model: The BERT model instance
-        eval_loader: DataLoader for validation data
-        device: Device to run evaluation on (CPU/GPU)
-        
-    Returns:
-        tuple: (validation loss, predicted labels, true labels)
-    """
+    """Evaluate the model"""
     model.eval()
     total_loss = 0
     all_preds = []
@@ -159,7 +119,7 @@ def evaluate(model, eval_loader, device):
         for batch in tqdm(eval_loader, desc="Evaluating"):
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-            labels = batch['label'].to(device)
+            labels = batch['labels'].to(device)
             
             outputs = model(
                 input_ids=input_ids,
@@ -167,26 +127,17 @@ def evaluate(model, eval_loader, device):
                 labels=labels
             )
             
-            total_loss += outputs.loss.item()
-            preds = torch.argmax(outputs.logits, dim=1)
+            loss = outputs.loss
+            total_loss += loss.item()
             
+            preds = (outputs.logits > 0).int()
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
     
-    return (
-        total_loss / len(eval_loader),
-        all_preds,
-        all_labels
-    )
+    return total_loss / len(eval_loader), all_preds, all_labels
 
 def save_model(model, tokenizer, output_dir="./emotion_model"):
-    """Save the trained model and tokenizer.
-    
-    Args:
-        model: Trained BERT model
-        tokenizer: Associated tokenizer
-        output_dir: Directory to save model files
-    """
+    """Save the trained model and tokenizer"""
     logger.info(f"Saving model to {output_dir}")
     os.makedirs(output_dir, exist_ok=True)
     
@@ -194,46 +145,46 @@ def save_model(model, tokenizer, output_dir="./emotion_model"):
     tokenizer.save_pretrained(output_dir)
 
 def main(args):
-    """Main training function.
-    
-    Args:
-        args: Command line arguments containing training parameters
-    """
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
     
     # Load tokenizer and model
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    logger.info("Loading tokenizer and model...")
+    tokenizer = AutoTokenizer.from_pretrained("SamLowe/roberta-base-go_emotions")
     model = AutoModelForSequenceClassification.from_pretrained(
-        "bert-base-uncased",
-        num_labels=6  # Number of emotion classes
-    ).to(device)
+        "SamLowe/roberta-base-go_emotions",
+        problem_type="multi_label_classification"
+    )
+    model.to(device)
     
     # Load datasets
-    train_dataset, val_dataset = load_data()
+    train_data, val_data = load_data()
     
     # Create data loaders
+    logger.info("Creating data loaders...")
+    train_dataset = EmotionDataset(
+        train_data['text'],
+        train_data['labels'],
+        tokenizer
+    )
+    val_dataset = EmotionDataset(
+        val_data['text'],
+        val_data['labels'],
+        tokenizer
+    )
+    
     train_loader = DataLoader(
-        EmotionDataset(
-            train_dataset['text'],
-            train_dataset['label'],
-            tokenizer
-        ),
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True
     )
-    
     val_loader = DataLoader(
-        EmotionDataset(
-            val_dataset['text'],
-            val_dataset['label'],
-            tokenizer
-        ),
+        val_dataset,
         batch_size=args.batch_size
     )
     
-    # Setup training
+    # Initialize optimizer and scheduler
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     total_steps = len(train_loader) * args.epochs
     scheduler = get_linear_schedule_with_warmup(
