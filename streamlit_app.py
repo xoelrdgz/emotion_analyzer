@@ -6,6 +6,10 @@ import plotly.graph_objects as go
 from datetime import datetime
 from pathlib import Path
 from emotion_analyzer import EmotionAnalyzer, Config
+import logging # Import logging if not already
+
+# Configure logging for Streamlit app if needed
+logger = logging.getLogger(__name__)
 
 # Page configuration with theme
 st.set_page_config(
@@ -62,14 +66,31 @@ COLORS = {
     "annoyance": "#e74c3c", "neutral": "#95a5a6"
 }
 
-# Initialize session state
-if 'analyzer' not in st.session_state:
+# --- Model Loading using st.cache_resource ---
+@st.cache_resource # Decorator to cache the resource
+def load_emotion_analyzer():
+    """Loads and initializes the EmotionAnalyzer."""
+    logger.info("Attempting to load EmotionAnalyzer...")
     config = Config()
     config.show_vis = False  # Disable built-in visualization
     analyzer = EmotionAnalyzer(config)
-    analyzer.initialize_models()
-    st.session_state.analyzer = analyzer
+    if analyzer.initialize_models():
+        logger.info("EmotionAnalyzer loaded successfully.")
+        return analyzer
+    else:
+        logger.error("Failed to initialize EmotionAnalyzer.")
+        st.error("Fatal Error: Could not load analysis models. Please check logs.")
+        # Optionally return None or raise an exception depending on desired behavior
+        return None # Return None if initialization fails
 
+# Get the analyzer instance (will be cached after first run)
+analyzer = load_emotion_analyzer()
+
+# Check if analyzer loaded successfully before proceeding
+if analyzer is None:
+    st.stop() # Stop script execution if models failed to load
+
+# --- Session State Initialization (after model loading) ---
 if 'analysis_history' not in st.session_state:
     st.session_state.analysis_history = []
 
@@ -228,36 +249,43 @@ with col1:
 with col2:
     analyze_button = st.button("🔍 Analyze", use_container_width=True)
 
+# --- Ensure analyzer is used correctly in process_analysis ---
 def process_analysis(text):
     """Process text analysis and update UI"""
+    global analyzer # Ensure we are using the globally loaded analyzer
+    if analyzer is None:
+         st.error("Analysis models are not available.")
+         return
+
     with st.spinner("Analyzing text..."):
         # Get analysis results
-        st.session_state.analyzer.config.emotion_threshold = threshold  # Update threshold
-        results = st.session_state.analyzer.analyze(text)
-        
+        analyzer.config.emotion_threshold = threshold  # Update threshold
+        results = analyzer.analyze(text) # Use the cached analyzer instance
+
         if results:
             # Filter emotions by threshold
             results["emotions"] = [
                 emotion for emotion in results["emotions"]
                 if emotion["score"] >= threshold
             ]
-            
+
             # Save to history
             results["timestamp"] = format_timestamp()
             results["text"] = text
-            st.session_state.analysis_history.append(results)
-            
+            # Prepend to history list for chronological order display
+            st.session_state.analysis_history.insert(0, results)
+
             st.success("Analysis completed!")
-            
+
             # Display results
             st.subheader("📊 Analysis Results")
-            
+
             # Split into columns for sentiment and emotions
             col_sentiment, col_emotions = st.columns([1, 2])
-            
+
             # Display sentiment and emotions
             display_sentiment_card(results["sentiment"], col_sentiment)
-            
+
             with col_emotions:
                 if results["emotions"]:
                     emotions_fig = create_emotions_bar_chart(results["emotions"])
@@ -265,7 +293,7 @@ def process_analysis(text):
                     st.info(f"Detected {len(results['emotions'])} emotions above {threshold}% confidence threshold")
                 else:
                     st.info(f"No emotions detected above {threshold}% confidence threshold")
-            
+
             # Display radar chart if enough emotions
             if results["emotions"] and len(results["emotions"]) >= 2:
                 st.subheader("🔍 Advanced Visualization")
@@ -292,36 +320,49 @@ if analyze_button and (text_input or uploaded_file):
 if st.session_state.analysis_history:
     st.divider()
     st.subheader("📜 Analysis History")
-    
-    # Show last 5 analyses
-    for idx, analysis in enumerate(reversed(st.session_state.analysis_history[-5:])):
+
+    # Show last 5 analyses (since we insert at the beginning, take the first 5)
+    for idx, analysis in enumerate(st.session_state.analysis_history[:5]):
         with st.expander(f"Analysis {len(st.session_state.analysis_history) - idx} - {analysis.get('timestamp', 'N/A')}"):
             # Show analyzed text
             st.markdown("**Analyzed text:**")
             st.markdown(f"> _{analysis.get('text', 'N/A')}_")
-            
+
             # Results columns
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 sentiment = analysis["sentiment"]
                 emotions = analysis["emotions"]
-                
+
                 st.markdown(f"**Sentiment:** {sentiment['label'].upper()} ({sentiment['score']:.2f}%)")
-                
+
                 # Show emotions list
                 st.markdown("**Detected emotions:**")
-                for emotion in emotions:
-                    emotion_color = COLORS.get(emotion['label'].lower(), COLORS['neutral'])
-                    st.markdown(
-                        f"""<div class="emotion-item">
-                            <span class="emotion-label">{emotion['label'].capitalize()}</span>
-                            <div class="emotion-bar" style="width: {emotion['score']}px; background-color: {emotion_color};"></div>
-                            <span class="emotion-value">{emotion['score']:.2f}%</span>
-                        </div>""", 
-                        unsafe_allow_html=True
-                    )
-            
+                if emotions: # Check if emotions list is not empty
+                    for emotion in emotions:
+                        emotion_color = COLORS.get(emotion['label'].lower(), COLORS['neutral'])
+                        st.markdown(
+                            f"""<div class="emotion-item">
+                                <span class="emotion-label">{get_emotion_label_with_emoji(emotion['label'])}</span>
+                                <div class="emotion-bar" style="width: {min(emotion['score'], 100)}%; background-color: {emotion_color};"></div>
+                                <span class="emotion-value">{emotion['score']:.1f}%</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                else:
+                    st.write("No emotions above threshold.")
+
             with col2:
-                emotions_fig = create_emotions_bar_chart(emotions)
-                st.plotly_chart(emotions_fig, use_container_width=True, key=f"history_{idx}_chart")
+                if emotions: # Only show chart if there are emotions
+                    emotions_fig = create_emotions_bar_chart(emotions)
+                    if emotions_fig:
+                        st.plotly_chart(emotions_fig, use_container_width=True, key=f"history_{idx}_chart")
+                else:
+                    st.write("No chart to display.") # Placeholder if no emotions
+
+    # Add button to clear history
+    if len(st.session_state.analysis_history) > 0:
+        if st.button("Clear History"):
+            clear_history()
+            st.rerun() # Rerun the script to reflect the cleared history
