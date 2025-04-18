@@ -134,8 +134,6 @@ class EmotionAnalyzer:
                 "SamLowe/roberta-base-go_emotions", 
                 emotion_model_dir
             )
-
-            logger.info(f"Using device: {self.config.device}")
             
             self.sentiment_model.to(self.config.device)
             self.emotion_model.to(self.config.device)
