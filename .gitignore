@@ -37,3 +37,7 @@ env/
 # Logs and databases
 *.log
 *.sqlite
+
+# Model folders and files
+emotion_model/
+sentiment_model/
