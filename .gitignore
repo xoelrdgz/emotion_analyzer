@@ -34,10 +34,6 @@ env/
 .project
 .pydevproject
 
-# Model files
-emotion_model/*.safetensors
-sentiment_model/*.safetensors
-
 # Logs and databases
 *.log
 *.sqlite
