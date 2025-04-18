@@ -1,27 +1,8 @@
-"""Emotion Detection Model Training Script.
+"""Training script for emotion detection using RoBERTa and go_emotions dataset.
 
-This script handles the fine-tuning of RoBERTa model for emotion detection
-using the go_emotions dataset. It implements a complete training pipeline 
-including data preprocessing, model configuration, training loop, and model evaluation.
-
-The trained model will be saved in the ./emotion_model directory and can be used
-by the Emotion Analyzer application for inference.
-
-Requirements:
-    - PyTorch
-    - Transformers
-    - Datasets
-    - NumPy
-    - scikit-learn
-    - tqdm
-
-Model Architecture:
-    Base: roberta-base
-    Task: Multi-label emotion classification
-    Output Classes: 28 emotions from go_emotions dataset
-    
-Usage:
-    python train_emotion_model.py [--epochs N] [--batch_size N] [--learning_rate N]
+Fine-tunes a RoBERTa model for multi-label emotion classification.
+Base model: roberta-base
+Task: Multi-label emotion classification (28 classes)
 """
 
 import torch
@@ -39,7 +20,6 @@ import logging
 import os
 import json
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -47,6 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class EmotionDataset(Dataset):
+    """Dataset wrapper for emotion classification data."""
     def __init__(self, texts, labels, tokenizer, max_length=128):
         self.texts = texts
         self.labels = labels
@@ -75,14 +56,13 @@ class EmotionDataset(Dataset):
         }
 
 def load_data():
-    """Load and preprocess the emotion dataset."""
+    """Load and preprocess the go_emotions dataset."""
     logger.info("Loading go_emotions dataset...")
     dataset = load_dataset("go_emotions")
-    
     return dataset['train'], dataset['validation']
 
 def train_epoch(model, train_loader, optimizer, scheduler, device):
-    """Train the model for one epoch"""
+    """Execute one training epoch."""
     model.train()
     total_loss = 0
     
@@ -109,7 +89,7 @@ def train_epoch(model, train_loader, optimizer, scheduler, device):
     return total_loss / len(train_loader)
 
 def evaluate(model, eval_loader, device):
-    """Evaluate the model"""
+    """Evaluate model performance."""
     model.eval()
     total_loss = 0
     all_preds = []
@@ -137,7 +117,7 @@ def evaluate(model, eval_loader, device):
     return total_loss / len(eval_loader), all_preds, all_labels
 
 def save_model(model, tokenizer, output_dir="./emotion_model"):
-    """Save the trained model and tokenizer"""
+    """Save the model and tokenizer to disk."""
     logger.info(f"Saving model to {output_dir}")
     os.makedirs(output_dir, exist_ok=True)
     
@@ -145,11 +125,9 @@ def save_model(model, tokenizer, output_dir="./emotion_model"):
     tokenizer.save_pretrained(output_dir)
 
 def main(args):
-    # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
     
-    # Load tokenizer and model
     logger.info("Loading tokenizer and model...")
     tokenizer = AutoTokenizer.from_pretrained("SamLowe/roberta-base-go_emotions")
     model = AutoModelForSequenceClassification.from_pretrained(
@@ -158,10 +136,8 @@ def main(args):
     )
     model.to(device)
     
-    # Load datasets
     train_data, val_data = load_data()
     
-    # Create data loaders
     logger.info("Creating data loaders...")
     train_dataset = EmotionDataset(
         train_data['text'],
@@ -184,7 +160,6 @@ def main(args):
         batch_size=args.batch_size
     )
     
-    # Initialize optimizer and scheduler
     optimizer = AdamW(model.parameters(), lr=args.learning_rate)
     total_steps = len(train_loader) * args.epochs
     scheduler = get_linear_schedule_with_warmup(
@@ -193,7 +168,6 @@ def main(args):
         num_training_steps=total_steps
     )
     
-    # Training loop
     logger.info("Starting training...")
     best_val_loss = float('inf')
     

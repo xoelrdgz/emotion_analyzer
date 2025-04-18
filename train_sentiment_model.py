@@ -1,29 +1,9 @@
-"""Sentiment Analysis Model Training Script.
+"""Training script for sentiment analysis using BERT and multiple sentiment datasets.
 
-This script handles the fine-tuning of a pre-trained BERT model for sentiment analysis
-using the nlptown/bert-base-multilingual-uncased-sentiment dataset. It implements a 
-complete training pipeline including data preprocessing, model configuration, training 
-loop, and model evaluation.
-
-The trained model will be saved in the ./sentiment_model directory and can be used
-by the Emotion Analyzer application for inference.
-
-Requirements:
-    - PyTorch
-    - Transformers
-    - Datasets
-    - NumPy
-    - scikit-learn
-    - tqdm
-
-Model Architecture:
-    Base: bert-base-multilingual-uncased
-    Task: Multi-class sentiment classification
-    Output Classes: 1-5 stars (mapped to negative/neutral/positive)
-    Languages: Supports multiple languages
-    
-Usage:
-    python train_sentiment_model.py [--epochs N] [--batch_size N] [--learning_rate N]
+Fine-tunes a multilingual BERT model for sentiment classification.
+Base model: bert-base-multilingual-uncased
+Task: Binary sentiment classification
+Data: Combined IMDB, Amazon, and Yelp reviews
 """
 
 from datasets import load_dataset, concatenate_datasets, Features, ClassLabel, Value
@@ -32,34 +12,34 @@ from transformers import DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import numpy as np
 
-# Configuration
+# Model configuration
 model_name = "distilbert-base-uncased"
 num_labels = 3
 batch_size = 8
 epochs = 3
 
+# Load and prepare datasets
 imdb = load_dataset("imdb", split="train").shuffle(seed=42).select(range(10000))
 amazon = load_dataset("amazon_polarity", split="train").shuffle(seed=42).select(range(10000))
 yelp = load_dataset("yelp_polarity", split="train").shuffle(seed=42).select(range(10000))
 
-# Define common features
 common_features = Features({
     'text': Value('string'),
     'label': ClassLabel(names=['negative', 'positive'])
 })
 
-# Function to standardize the format
 def standardize_dataset(example, is_amazon=False):
+    """Standardize dataset format to common schema."""
     if is_amazon:
         text = example["content"]
     else:
         text = example["text"]
     return {
         "text": text,
-        "label": 0 if example["label"] == 1 else 1  # Invert so that 0=negative, 1=positive
+        "label": 0 if example["label"] == 1 else 1  # Convert to 0=negative, 1=positive
     }
 
-# Standardize each dataset
+# Process datasets to common format
 imdb = imdb.map(standardize_dataset, remove_columns=imdb.column_names).cast(common_features)
 amazon = amazon.map(
     lambda x: standardize_dataset(x, is_amazon=True), 
@@ -67,22 +47,20 @@ amazon = amazon.map(
 ).cast(common_features)
 yelp = yelp.map(standardize_dataset, remove_columns=yelp.column_names).cast(common_features)
 
-# Concatenate the datasets
 dataset = concatenate_datasets([imdb, amazon, yelp]).shuffle(seed=42)
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 def tokenize(example):
+    """Tokenize text using model tokenizer."""
     return tokenizer(example["text"], truncation=True)
 
 tokenized = dataset.map(tokenize, batched=True)
-
-# Split into train/test
 split = tokenized.train_test_split(test_size=0.1)
-
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
 def compute_metrics(eval_pred):
+    """Calculate model performance metrics."""
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
@@ -114,6 +92,6 @@ trainer = Trainer(
 
 trainer.train()
 
-# Save final model
+# Save model and tokenizer
 trainer.save_model("./sentiment_model")
 tokenizer.save_pretrained("./sentiment_model")

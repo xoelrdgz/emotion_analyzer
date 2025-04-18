@@ -1,9 +1,4 @@
-"""Core Emotion Analysis Module.
-
-This module provides the core functionality for emotion and sentiment analysis
-using pre-trained transformer models. It handles model loading, text analysis,
-and result processing.
-"""
+"""Core functionality for emotion and sentiment analysis using transformer models."""
 
 import torch
 import logging
@@ -19,24 +14,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class Config:
-    """Configuration for the EmotionAnalyzer.
-    
-    Attributes:
-        show_vis (bool): Whether to show visualizations (for CLI usage)
-        batch_size (int): Batch size for model inference
-        max_length (int): Maximum text length for analysis
-        device (torch.device): Device to run models on
-        emotion_threshold (float): Minimum confidence threshold for emotions (0-100)
-    """
+    """Application configuration settings."""
     def __init__(self):
         self.show_vis = False
         self.batch_size = 8
         self.max_length = 512
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.emotion_threshold = 1.0  # Default threshold of 1%
+        self.emotion_threshold = 1.0
 
 class SentimentProcessor:
-    """Handles sentiment analysis result processing and mapping."""
+    """Maps and normalizes sentiment analysis results."""
     
     SENTIMENT_LABELS = {
         "1 star": ("negative", 0.2),
@@ -48,11 +35,11 @@ class SentimentProcessor:
     
     @classmethod
     def process_sentiment(cls, label: str, score: float) -> tuple[str, float, str]:
-        """Process sentiment analysis results.
+        """Convert model output to normalized sentiment scores.
         
         Args:
-            label: Raw sentiment label from model
-            score: Confidence score from model
+            label: Raw model sentiment label
+            score: Model confidence score
             
         Returns:
             Tuple of (category, normalized_score, display_label)
@@ -67,14 +54,10 @@ class SentimentProcessor:
         return "neutral", score * 100, label.upper()
 
 class EmotionAnalyzer:
-    """Main class for emotion and sentiment analysis."""
+    """Main class for text emotion and sentiment analysis."""
 
     def __init__(self, config: Config):
-        """Initialize the analyzer with configuration.
-        
-        Args:
-            config: Configuration object
-        """
+        """Initialize analyzer with configuration."""
         self.config = config
         self.sentiment_model = None
         self.emotion_model = None
@@ -82,17 +65,14 @@ class EmotionAnalyzer:
         self.emotion_classifier = None
 
     def load_model(self, model_name: str, model_dir: str) -> tuple:
-        """Load a model from local storage or download it.
+        """Load or download a model.
         
         Args:
-            model_name: HuggingFace model name
-            model_dir: Local directory for model storage
+            model_name: HuggingFace model identifier
+            model_dir: Local storage directory
             
         Returns:
             Tuple of (model, tokenizer)
-            
-        Raises:
-            Exception: If model loading fails
         """
         try:
             model_path = Path(model_dir)
@@ -117,11 +97,7 @@ class EmotionAnalyzer:
             raise Exception(f"Unexpected error loading {model_name}: {str(e)}")
 
     def initialize_models(self) -> bool:
-        """Initialize sentiment and emotion models.
-        
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
+        """Load and configure both sentiment and emotion models."""
         try:
             sentiment_model_dir = "./sentiment_model"
             emotion_model_dir = "./emotion_model"
@@ -161,17 +137,7 @@ class EmotionAnalyzer:
             return False
 
     def validate_input(self, text: str) -> bool:
-        """Validate the input text.
-        
-        Args:
-            text: Input text to validate
-            
-        Returns:
-            bool: True if valid, False otherwise
-            
-        Raises:
-            Exception: If validation fails
-        """
+        """Validate text input meets requirements."""
         if not text or not text.strip():
             raise Exception("Input text cannot be empty")
         if len(text) > self.config.max_length:
@@ -181,7 +147,7 @@ class EmotionAnalyzer:
         return True
 
     def cleanup(self):
-        """Clean up resources and free GPU memory."""
+        """Release model resources and GPU memory."""
         try:
             if hasattr(self, 'sentiment_model'):
                 del self.sentiment_model
@@ -193,26 +159,24 @@ class EmotionAnalyzer:
             logger.error(f"Error during cleanup: {str(e)}")
 
     def analyze(self, text: str) -> Optional[Dict]:
-        """Analyze sentiment and emotions in text.
+        """Perform emotion and sentiment analysis on text.
         
         Args:
             text: Input text to analyze
             
         Returns:
-            Dict containing analysis results or None if analysis fails
+            Dict with sentiment and emotion scores or None if analysis fails
         """
         try:
             if not self.validate_input(text):
                 return None
 
-            # Get sentiment analysis
             sentiment_result = self.sentiment_classifier(text)[0]
             sentiment_category, normalized_score, display_label = SentimentProcessor.process_sentiment(
                 sentiment_result["label"],
                 sentiment_result["score"]
             )
 
-            # Get emotion analysis
             emotion_result = self.emotion_classifier(text)[0]
             sorted_emotions = sorted(emotion_result, key=lambda x: x["score"], reverse=True)
 
