@@ -4,11 +4,6 @@ A Streamlit-based application for analyzing emotions and sentiment in text using
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://emotionanalyzer.streamlit.app/)
 
-## Live Demo
-
-Access the live application hosted on Streamlit Cloud:
-[https://emotionanalyzer.streamlit.app/](https://emotionanalyzer.streamlit.app/)
-
 ## Features
 
 - **Dual Analysis**: Performs both multi-label emotion detection and sentiment analysis.
@@ -71,42 +66,6 @@ If you wish to run the application locally:
     - Click "Analyze" to view sentiment and emotion results.
     - Explore past analyses in the "Analysis History" section.
 
-## Training Models (Optional and not tested)
-
-Scripts are provided to fine-tune the models. This requires installing additional dependencies like `datasets` and `scikit-learn`.
-
-```bash
-# Train emotion detection model (uses go_emotions dataset)
-python train_emotion_model.py --epochs 3 --batch_size 16 --learning_rate 2e-5
-
-# Train sentiment analysis model (uses combined datasets)
-python train_sentiment_model.py --epochs 3 --batch_size 8 --learning_rate 2e-5
-```
-
-## Requirements
-
-- Python 3.8+
-- PyTorch
-- Transformers
-- FastAPI
-- Streamlit
-- See `requirements.txt` for complete list
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to your branch
-5. Create a Pull Request
-
-## Acknowledgments
-
-Models obtained from the Hugging Face Hub:
-
-- SamLowe/roberta-base-go_emotions
-- nlptown/bert-base-multilingual-uncased-sentiment
